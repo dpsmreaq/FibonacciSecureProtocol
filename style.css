@@ -1,0 +1,9 @@
+.result {
+    border: 1px solid #000;        /* กรอบ */
+    padding: 10px;                 /* เว้นขอบ */
+    margin-top: 10px;
+    max-width: 600px;
+    white-space: pre-wrap;         /* แสดงบรรทัดใหม่ */
+    overflow-wrap: break-word;     /* ตัดคำยาว ๆ ให้อยู่ในกรอบ */
+    word-break: break-all;         /* ตัดตัวอักษรยาว ๆ */
+}

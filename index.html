@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>FSP Demo</title>
+<style>
+body { font-family: Arial; margin: 40px; }
+.container { max-width: 600px; margin: auto; }
+input, textarea, button { width: 100%; padding: 8px; margin: 6px 0; }
+.result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+#result {
+    border: 1px solid #000;
+    padding: 10px;
+    margin-top: 10px;
+    max-width: 600px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-all;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>FSP Encryption Demo</h2>
+
+<label>Message:</label>
+<textarea id="message" rows="3"></textarea>
+
+<label>Key (k):</label>
+<input type="number" id="key" value="10">
+
+<button onclick="encrypt()">Encrypt</button>
+<button onclick="decrypt()">Decrypt</button>
+
+<div class="result" id="result">The results will be displayed here.</div>
+<div class="result" id="matrixResult">Matrix and Key info will appear here.</div>
+
+<!-- Chart.js สำหรับกราฟ -->
+<h3>Protocol Benchmark (Encrypt/Decrypt time)</h3>
+<canvas id="protocolChart" width="600" height="300"></canvas>
+
+<h3>Fibonacci Comparison (Iterative vs Matrix)</h3>
+<canvas id="fibChart" width="600" height="300"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// ฟังก์ชันโชว์ matrix & key hash
+function showMatrixInfo(matrix, keyHash, timeEnc, timeDec) {
+    let html = "<b>Matrix Q^k mod m:</b><br>";
+    html += `<table border='1' style='border-collapse: collapse;'><tr><td>${matrix[0][0]}</td><td>${matrix[0][1]}</td></tr><tr><td>${matrix[1][0]}</td><td>${matrix[1][1]}</td></tr></table>`;
+    html += `<br><b>Key Hash (SHA-256):</b> ${keyHash}<br>`;
+    html += `<b>Encrypt Time:</b> ${timeEnc.toFixed(4)} s, <b>Decrypt Time:</b> ${timeDec.toFixed(4)} s`;
+    document.getElementById("matrixResult").innerHTML = html;
+}
+
+// เก็บ ciphertext ล่าสุด
+let lastCiphertext = "";
+
+// เปลี่ยน URL ให้เป็น backend จริงบน Render
+const BASE_URL = "https://fsp-backend.onrender.com";
+
+// --- เรียก backend เพื่อ encrypt ---
+async function encrypt() {
+    let msg = document.getElementById("message").value;
+    let key = document.getElementById("key").value;
+    if (!msg) { alert("ใส่ข้อความก่อน!"); return; }
+
+    try {
+        const res = await fetch(`${BASE_URL}/encrypt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, key: key })
+        });
+        const data = await res.json();
+        lastCiphertext = data.nonce_ct;
+
+        document.getElementById("result").innerHTML = `
+            <b>Ciphertext (hex):</b> ${data.nonce_ct}<br>
+            <b>Key:</b> ${key}
+        `;
+        showMatrixInfo(data.matrix, data.key_hash, 0, 0);
+    } catch(err) {
+        alert("เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ backend ได้!");
+        console.error(err);
+    }
+}
+
+// --- เรียก backend เพื่อ decrypt ---
+async function decrypt() {
+    let key = document.getElementById("key").value;
+    if (!lastCiphertext) { alert("ต้องกด Encrypt ก่อน!"); return; }
+
+    try {
+        const res = await fetch(`${BASE_URL}/decrypt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nonce_ct: lastCiphertext, key: key })
+        });
+        const data = await res.json();
+
+        document.getElementById("result").innerHTML = `
+            <b>Plaintext:</b> ${data.plaintext}<br>
+            <b>Key:</b> ${key}
+        `;
+        showMatrixInfo(data.matrix, data.key_hash, 0, 0);
+    } catch(err) {
+        alert("เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ backend ได้!");
+        console.error(err);
+    }
+}
+
+// --- Chart.js Static Data ---
+const protocolCtx = document.getElementById('protocolChart').getContext('2d');
+const protocolChart = new Chart(protocolCtx, {
+    type: 'line',
+    data: {
+        labels: [10, 100, 1000, 5000, 10000, 20000],
+        datasets: [
+            { label: 'Encrypt Time', data: [0.01,0.02,0.05,0.1,0.3,0.6], borderColor: 'blue', fill: false },
+            { label: 'Decrypt Time', data: [0.008,0.018,0.045,0.09,0.28,0.55], borderColor: 'green', fill: false }
+        ]
+    },
+    options: { responsive: true, scales: { x: { type: 'logarithmic' }, y: { type: 'logarithmic' } }, plugins: { tooltip: { enabled: true } } }
+});
+
+const fibCtx = document.getElementById('fibChart').getContext('2d');
+const fibChart = new Chart(fibCtx, {
+    type: 'line',
+    data: {
+        labels: [10, 100, 1000, 5000, 10000, 20000, 50000],
+        datasets: [
+            { label: 'Iterative', data: [0.001,0.01,0.1,0.5,1.2,3,8], borderColor:'red', fill:false },
+            { label: 'Matrix', data: [0.001,0.002,0.003,0.004,0.005,0.006,0.01], borderColor:'purple', fill:false }
+        ]
+    },
+    options: { responsive: true, scales: { x: { type: 'logarithmic' }, y: { type: 'logarithmic' } }, plugins: { tooltip: { enabled: true } } }
+});
+</script>
+</body>
+</html>
