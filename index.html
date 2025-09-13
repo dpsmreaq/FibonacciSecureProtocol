@@ -42,7 +42,6 @@ input, textarea, button { width: 100%; padding: 8px; margin: 6px 0; }
 <h3>Fibonacci Comparison (Iterative vs Matrix)</h3>
 <canvas id="fibChart" width="600" height="300"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // ฟังก์ชันโชว์ matrix & key hash
 function showMatrixInfo(matrix, keyHash, timeEnc, timeDec) {
@@ -66,19 +65,29 @@ async function encrypt() {
     if (!msg) { alert("ใส่ข้อความก่อน!"); return; }
 
     try {
+        const start = performance.now();
         const res = await fetch(`${BASE_URL}/encrypt`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: msg, key: key })
         });
         const data = await res.json();
+        const end = performance.now();
+        const timeEnc = (end - start) / 1000; // วินาที
+
         lastCiphertext = data.nonce_ct;
 
         document.getElementById("result").innerHTML = `
             <b>Ciphertext (hex):</b> ${data.nonce_ct}<br>
             <b>Key:</b> ${key}
         `;
-        showMatrixInfo(data.matrix, data.key_hash, 0, 0);
+        showMatrixInfo(data.matrix, data.key_hash, timeEnc, 0);
+
+        // อัปเดตกราฟเวลา encrypt
+        protocolChart.data.labels.push(protocolChart.data.labels.length + 1);
+        protocolChart.data.datasets[0].data.push(timeEnc);
+        protocolChart.update();
+
     } catch(err) {
         alert("เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ backend ได้!");
         console.error(err);
@@ -91,38 +100,47 @@ async function decrypt() {
     if (!lastCiphertext) { alert("ต้องกด Encrypt ก่อน!"); return; }
 
     try {
+        const start = performance.now();
         const res = await fetch(`${BASE_URL}/decrypt`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nonce_ct: lastCiphertext, key: key })
         });
         const data = await res.json();
+        const end = performance.now();
+        const timeDec = (end - start) / 1000; // วินาที
 
         document.getElementById("result").innerHTML = `
             <b>Plaintext:</b> ${data.plaintext}<br>
             <b>Key:</b> ${key}
         `;
-        showMatrixInfo(data.matrix, data.key_hash, 0, 0);
+        showMatrixInfo(data.matrix, data.key_hash, 0, timeDec);
+
+        // อัปเดตกราฟเวลา decrypt
+        protocolChart.data.datasets[1].data.push(timeDec);
+        protocolChart.update();
+
     } catch(err) {
         alert("เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ backend ได้!");
         console.error(err);
     }
 }
 
-// --- Chart.js Static Data ---
+// --- Chart.js Static Data เหมือนเดิม ---
 const protocolCtx = document.getElementById('protocolChart').getContext('2d');
 const protocolChart = new Chart(protocolCtx, {
     type: 'line',
     data: {
-        labels: [10, 100, 1000, 5000, 10000, 20000],
+        labels: [1,2,3,4,5,6],
         datasets: [
             { label: 'Encrypt Time', data: [0.01,0.02,0.05,0.1,0.3,0.6], borderColor: 'blue', fill: false },
             { label: 'Decrypt Time', data: [0.008,0.018,0.045,0.09,0.28,0.55], borderColor: 'green', fill: false }
         ]
     },
-    options: { responsive: true, scales: { x: { type: 'logarithmic' }, y: { type: 'logarithmic' } }, plugins: { tooltip: { enabled: true } } }
+    options: { responsive: true, scales: { x: { title: {display: true, text:'Operation #'} }, y: { type: 'logarithmic', title: {display: true, text:'Time (s)'} } }, plugins: { tooltip: { enabled: true } } }
 });
 
+// Fibonacci chart เหมือนเดิม
 const fibCtx = document.getElementById('fibChart').getContext('2d');
 const fibChart = new Chart(fibCtx, {
     type: 'line',
