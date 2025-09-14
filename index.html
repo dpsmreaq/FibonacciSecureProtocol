@@ -141,19 +141,6 @@ const protocolChart = new Chart(protocolCtx, {
     options: { responsive: true, scales: { x: { title: {display: true, text:'Operation #'} }, y: { type: 'logarithmic', title: {display: true, text:'Time (s)'} } }, plugins: { tooltip: { enabled: true } } }
 });
 
-// Fibonacci chart เหมือนเดิม
-const fibCtx = document.getElementById('fibChart').getContext('2d');
-const fibChart = new Chart(fibCtx, {
-    type: 'line',
-    data: {
-        labels: [10, 100, 1000, 5000, 10000, 20000, 50000],
-        datasets: [
-            { label: 'Iterative', data: [0.001,0.01,0.1,0.5,1.2,3,8], borderColor:'red', fill:false },
-            { label: 'Matrix', data: [0.001,0.002,0.003,0.004,0.005,0.006,0.01], borderColor:'purple', fill:false }
-        ]
-    },
-    options: { responsive: true, scales: { x: { type: 'logarithmic' }, y: { type: 'logarithmic' } }, plugins: { tooltip: { enabled: true } } }
-});
 </script>
 </body>
 </html>
